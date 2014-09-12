@@ -7,7 +7,24 @@
 	<version>1.0.0</version>
 	<name>Viskan Distanshandel System AB :: Logstash Appender</name>
 	<description>Appends logs to Logstash in a very friendly JSON format.</description>
+	<url>https://github.com/Viskan/logstash-appender</url>
 	<packaging>bundle</packaging>
+	
+	<organization>
+		<name>Viskan Distanshandel System AB</name>
+		<url>http://www.viskan.se/</url>
+	</organization>
+
+	<issueManagement>
+		<system>GitHub Issues</system>
+		<url>https://github.com/Viskan/logstash-appender/issues</url>
+	</issueManagement>
+	
+	<scm>
+		<url>https://github.com/Viskan/logstash-appender</url>
+		<connection>scm:git:git://github.com/Viskan/logstash-appender.git</connection>
+		<developerConnection>scm:git:git@github.com:Viskan/logstash-appender.git</developerConnection>
+	</scm>
 
 	<distributionManagement>
 		<snapshotRepository>
@@ -19,6 +36,15 @@
 			<url>http://maven01.viskan.se:8081/nexus/content/repositories/ViskanReleases</url>
 		</repository>
 	</distributionManagement>
+	
+	<developers>
+		<developer>
+			<email>antoon.johansson@gmail.com</email>
+			<name>Anton Johansson</name>
+			<url>https://github.com/anton-johansson</url>
+			<id>anton-johansson</id>
+		</developer>
+	</developers>
 
 	<dependencies>
 		<dependency>
@@ -72,5 +98,5 @@
 			</plugin>
 		</plugins>
 	</build>
-
+	
 </project>
