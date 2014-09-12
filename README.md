@@ -8,21 +8,19 @@ Usage: logstash configuration
 -----------------------------
 A simple example of the logstash server configuration:
 
-```json
-input {
-	udp {
-		port => 8400
-		codec => "json"
+	input {
+		udp {
+			port => 8400
+			codec => "json"
+		}
 	}
-}
-output {
-	elasticsearch {
-		protocol => http
-		host => "localhost"
-		port => 9200
+	output {
+		elasticsearch {
+			protocol => http
+			host => "localhost"
+			port => 9200
+		}
 	}
-}
-```
 	
 
 Usage: log4j configuration
