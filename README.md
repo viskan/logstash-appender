@@ -10,7 +10,7 @@ A simple example of the logstash server configuration:
 
 	input {
 		udp {
-			port => 8400
+			port => 12345
 			codec => "json"
 		}
 	}
