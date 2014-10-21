@@ -28,12 +28,14 @@
 
 	<distributionManagement>
 		<snapshotRepository>
-			<id>ViskanSnapshots</id>
-			<url>http://maven01.viskan.se:8081/nexus/content/repositories/ViskanSnapshots</url>
+			<id>ossrh</id>
+			<name>Maven Central Snapshot Repository</name>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
 		</snapshotRepository>
 		<repository>
-			<id>ViskanReleases</id>
-			<url>http://maven01.viskan.se:8081/nexus/content/repositories/ViskanReleases</url>
+			<id>ossrh</id>
+			<name>Maven Central Staging Repository</name>
+			<url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
 		</repository>
 	</distributionManagement>
 	
@@ -95,6 +97,12 @@
 						</goals>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-release-plugin</artifactId>
+				<version>2.5.1</version>
+				<goals>deploy</goals>
 			</plugin>
 		</plugins>
 	</build>
