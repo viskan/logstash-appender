@@ -4,6 +4,19 @@ logstash-appender
 A simple log4j appender that sends a JSON-object to a Logstash server.
 
 
+Where can I find the releases?
+-----------------------------
+You can pull it from the central Maven repositories:
+
+```xml
+<dependency>
+	<groupId>com.viskan</groupId>
+	<artifactId>logstash-appender</artifactId>
+	<version>1.0.0</version>
+<dependency>
+```
+
+
 Usage: logstash configuration
 -----------------------------
 A simple example of the logstash server configuration:
