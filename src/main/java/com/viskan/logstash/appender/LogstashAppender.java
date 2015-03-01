@@ -17,7 +17,7 @@ import org.apache.log4j.spi.ThrowableInformation;
 /**
  * Log4j appender that appends logs to Logstash in a JSON-format that is very
  * easy for Logstash to consume and dump directly into Elastic Search, for example.
- * 
+ *
  * @author Anton Johansson
  */
 public class LogstashAppender extends AppenderSkeleton
@@ -27,7 +27,7 @@ public class LogstashAppender extends AppenderSkeleton
 	private int logstashPort;
 	private String mdcKeys = "";
 	private boolean appendClassInformation;
-	
+
 	private DatagramSocket socket;
 	private InetAddress address;
 	private String[] actualMdcKeys;
@@ -61,7 +61,7 @@ public class LogstashAppender extends AppenderSkeleton
 	{
 		this.logstashPort = logstashPort;
 	}
-	
+
 	public String getMdcKeys()
 	{
 		return mdcKeys;
@@ -92,10 +92,10 @@ public class LogstashAppender extends AppenderSkeleton
 		{
 			return;
 		}
-		
+
 		String data = getData(event);
 		byte[] buffer = data.getBytes();
-		
+
 		DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, logstashPort);
 		try
 		{
@@ -111,23 +111,24 @@ public class LogstashAppender extends AppenderSkeleton
 	{
 		StringBuilder data = new StringBuilder();
 		addValue(data, "message", event.getMessage());
+		addValue(data, "loggerName", event.getLoggerName());
 		addValue(data, "application", application);
 		addValue(data, "severity", event.getLevel().getSyslogEquivalent());
 		addValue(data, "severityText", event.getLevel());
-		
+
 		if (appendClassInformation)
 		{
 			LocationInfo locationInformation = event.getLocationInformation();
 			addValue(data, "className", locationInformation.getClassName());
 			addValue(data, "lineNumber", locationInformation.getLineNumber());
 		}
-		
+
 		ThrowableInformation throwableInformation = event.getThrowableInformation();
 		if (throwableInformation != null)
 		{
 			addValue(data, "stacktrace", getStacktrace(throwableInformation.getThrowable()));
 		}
-		
+
 		for (String mdcKey : actualMdcKeys)
 		{
 			Object mdcValue = event.getMDC(mdcKey);
@@ -136,14 +137,14 @@ public class LogstashAppender extends AppenderSkeleton
 				addValue(data, mdcKey, mdcValue);
 			}
 		}
-		
+
 		return data.append(" }").toString();
 	}
 
 	private void addValue(StringBuilder data, String key, Object value)
 	{
 		boolean isFirstValue = data.toString().isEmpty();
-		
+
 		if (isFirstValue)
 		{
 			data.append("{ ");
@@ -152,14 +153,14 @@ public class LogstashAppender extends AppenderSkeleton
 		{
 			data.append(", ");
 		}
-		
+
 		data.append("\"")
 			.append(escape(key))
 			.append("\": \"")
 			.append(escape(value.toString()))
 			.append("\"");
 	}
-	
+
 	private Object getStacktrace(Throwable throwable)
 	{
 		try (StringWriter stringWriter = new StringWriter();
@@ -177,7 +178,7 @@ public class LogstashAppender extends AppenderSkeleton
 
 	/**
 	 * We use UDP when appending to Logstash, so we do not need to close the connection.
-	 * 
+	 *
 	 */
 	@Override
 	public void close()
@@ -190,7 +191,7 @@ public class LogstashAppender extends AppenderSkeleton
 
 	/**
 	 * This appender does not require a layout, hence we return {@code false}.
-	 * 
+	 *
 	 * @return Returns {@code false}.
 	 */
 	@Override
@@ -206,7 +207,7 @@ public class LogstashAppender extends AppenderSkeleton
 	public void activateOptions()
 	{
 		actualMdcKeys = mdcKeys.replaceAll(" ", "").split(",");
-		
+
 		try
 		{
 			address = InetAddress.getByName(logstashHost);
@@ -221,19 +222,21 @@ public class LogstashAppender extends AppenderSkeleton
 			System.err.println("Could not create UDP socket");
 		}
 	}
-	
+
 	/**
 	 * Escape quotes, \, /, \r, \n, \b, \f, \t and other control characters (U+0000 through U+001F).
 	 * <p>
 	 * Taken from the JSONValue class of json-simple-1.1.jar
-	 * 
+	 *
 	 * @param s
 	 * @return
 	 */
 	//CSOFF
 	private String escape(String s){
 		if(s==null)
+		{
 			return null;
+		}
         StringBuffer sb = new StringBuffer();
         escape(s, sb);
         return sb.toString();
@@ -241,7 +244,7 @@ public class LogstashAppender extends AppenderSkeleton
 
 	/**
 	 * Taken from JSONValue class of json-simple-1.1.jar
-	 * 
+	 *
      * @param s - Must not be null.
      * @param sb
      */
