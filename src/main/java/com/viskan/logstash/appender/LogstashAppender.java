@@ -22,7 +22,8 @@ import org.apache.log4j.spi.ThrowableInformation;
  */
 public class LogstashAppender extends AppenderSkeleton
 {
-	private String application = "";
+	private String application;
+	private String environment;
 	private String logstashHost = "";
 	private int logstashPort;
 	private String mdcKeys = "";
@@ -40,6 +41,16 @@ public class LogstashAppender extends AppenderSkeleton
 	public void setApplication(String application)
 	{
 		this.application = application;
+	}
+
+	public String getEnvironment()
+	{
+		return environment;
+	}
+
+	public void setEnvironment(String environment)
+	{
+		this.environment = environment;
 	}
 
 	public String getLogstashHost()
@@ -111,10 +122,19 @@ public class LogstashAppender extends AppenderSkeleton
 	{
 		StringBuilder data = new StringBuilder();
 		addValue(data, "message", event.getMessage());
-		addValue(data, "loggerName", event.getLoggerName());
-		addValue(data, "application", application);
+		addValue(data, "name", event.getLoggerName());
 		addValue(data, "severity", event.getLevel().getSyslogEquivalent());
 		addValue(data, "severityText", event.getLevel());
+		
+		if (application != null)
+		{
+			addValue(data, "application", application);
+		}
+		
+		if (environment != null)
+		{
+			addValue(data, "environment", environment);
+		}
 
 		if (appendClassInformation)
 		{
@@ -138,7 +158,7 @@ public class LogstashAppender extends AppenderSkeleton
 			}
 		}
 
-		return data.append(" }").toString();
+		return data.append("}").toString();
 	}
 
 	private void addValue(StringBuilder data, String key, Object value)
@@ -147,16 +167,16 @@ public class LogstashAppender extends AppenderSkeleton
 
 		if (isFirstValue)
 		{
-			data.append("{ ");
+			data.append("{");
 		}
 		else
 		{
-			data.append(", ");
+			data.append(",");
 		}
 
 		data.append("\"")
 			.append(escape(key))
-			.append("\": \"")
+			.append("\":\"")
 			.append(escape(value.toString()))
 			.append("\"");
 	}
