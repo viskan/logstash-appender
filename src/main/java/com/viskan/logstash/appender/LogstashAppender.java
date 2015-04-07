@@ -33,19 +33,9 @@ public class LogstashAppender extends AppenderSkeleton
 	private InetAddress address;
 	private String[] actualMdcKeys;
 
-	public String getApplication()
-	{
-		return application;
-	}
-
 	public void setApplication(String application)
 	{
 		this.application = application;
-	}
-
-	public String getEnvironment()
-	{
-		return environment;
 	}
 
 	public void setEnvironment(String environment)
@@ -53,19 +43,9 @@ public class LogstashAppender extends AppenderSkeleton
 		this.environment = environment;
 	}
 
-	public String getLogstashHost()
-	{
-		return logstashHost;
-	}
-
 	public void setLogstashHost(String logstashHost)
 	{
 		this.logstashHost = logstashHost;
-	}
-
-	public int getLogstashPort()
-	{
-		return logstashPort;
 	}
 
 	public void setLogstashPort(int logstashPort)
@@ -73,19 +53,9 @@ public class LogstashAppender extends AppenderSkeleton
 		this.logstashPort = logstashPort;
 	}
 
-	public String getMdcKeys()
-	{
-		return mdcKeys;
-	}
-
 	public void setMdcKeys(String mdcKeys)
 	{
 		this.mdcKeys = mdcKeys;
-	}
-
-	public boolean isAppendClassInformation()
-	{
-		return appendClassInformation;
 	}
 
 	public void setAppendClassInformation(boolean appendClassInformation)
@@ -164,6 +134,7 @@ public class LogstashAppender extends AppenderSkeleton
 	private void addValue(StringBuilder data, String key, Object value)
 	{
 		boolean isFirstValue = data.toString().isEmpty();
+		boolean isNumber = value instanceof Number;
 
 		if (isFirstValue)
 		{
@@ -176,9 +147,19 @@ public class LogstashAppender extends AppenderSkeleton
 
 		data.append("\"")
 			.append(escape(key))
-			.append("\":\"")
-			.append(escape(value.toString()))
-			.append("\"");
+			.append("\":");
+		
+		if (!isNumber)
+		{
+			data.append("\"");
+		}
+		
+		data.append(escape(value.toString()));
+		
+		if (!isNumber)
+		{
+			data.append("\"");
+		}
 	}
 
 	private Object getStacktrace(Throwable throwable)
