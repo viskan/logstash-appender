@@ -1,5 +1,7 @@
 package com.viskan.logstash.appender;
 
+import static java.lang.Math.min;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -22,12 +24,16 @@ import org.apache.log4j.spi.ThrowableInformation;
  */
 public class LogstashAppender extends AppenderSkeleton
 {
+	private static final String TRUNCATED_BY_LOGSTASH_APPENDER = "...[truncated by logstash appender]";
+	private static final int TRUNCATE_MSG_LENGTH = TRUNCATED_BY_LOGSTASH_APPENDER.length();
+	
 	private String application;
 	private String environment;
 	private String logstashHost = "";
 	private int logstashPort;
 	private String mdcKeys = "";
 	private boolean appendClassInformation;
+	private int stacktraceLength = Integer.MIN_VALUE;
 
 	private DatagramSocket socket;
 	private InetAddress address;
@@ -61,6 +67,11 @@ public class LogstashAppender extends AppenderSkeleton
 	public void setAppendClassInformation(boolean appendClassInformation)
 	{
 		this.appendClassInformation = appendClassInformation;
+	}
+	
+	public void setStacktraceLength(int stacktraceLength)
+	{
+		this.stacktraceLength = stacktraceLength;
 	}
 
 	/**
@@ -164,11 +175,15 @@ public class LogstashAppender extends AppenderSkeleton
 
 	private Object getStacktrace(Throwable throwable)
 	{
-		try (StringWriter stringWriter = new StringWriter();
-			 PrintWriter printWriter = new PrintWriter(stringWriter))
+		try (StringWriter stringWriter = new StringWriter(); PrintWriter printWriter = new PrintWriter(stringWriter))
 		{
 			throwable.printStackTrace(printWriter);
-			return stringWriter.toString();
+			String stackTrace = stringWriter.toString();
+			if (stacktraceLength >= 0)
+			{
+				return stackTrace.substring(0, min(stackTrace.length(), stacktraceLength) - TRUNCATE_MSG_LENGTH) + TRUNCATED_BY_LOGSTASH_APPENDER;
+			}
+			return stackTrace;
 		}
 		catch (IOException e)
 		{
