@@ -165,7 +165,10 @@ public class LogstashAppender extends AppenderSkeleton
 			data.append("\"");
 		}
 		
-		data.append(escape(value.toString()));
+		if (value != null)
+		{
+			data.append(escape(value.toString()));
+		}
 		
 		if (!isNumber)
 		{
