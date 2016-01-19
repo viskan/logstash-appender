@@ -1,6 +1,7 @@
 package com.viskan.logstash.appender;
 
 import static java.lang.Math.min;
+import static java.nio.charset.Charset.forName;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -86,7 +87,7 @@ public class LogstashAppender extends AppenderSkeleton
 		}
 
 		String data = getData(event);
-		byte[] buffer = data.getBytes();
+		byte[] buffer = data.getBytes(forName("UTF-8"));
 
 		DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, logstashPort);
 		try
