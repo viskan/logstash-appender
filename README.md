@@ -1,6 +1,8 @@
 logstash-appender
 =================
 
+[![Maven Central](https://img.shields.io/maven-central/v/com.viskan/logstash-appender.svg?style=flat-square)](http://mvnrepository.com/artifact/com.viskan/logstash-appender)
+
 A simple log4j appender that sends a JSON-object to a Logstash server.
 
 
