@@ -2,97 +2,188 @@ package com.viskan.logstash.appender;
 
 import static java.lang.Math.min;
 import static java.nio.charset.Charset.forName;
+import static java.util.Arrays.asList;
+import static java.util.stream.Collectors.toMap;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Collectors;
 
-import org.apache.log4j.AppenderSkeleton;
-import org.apache.log4j.spi.LocationInfo;
-import org.apache.log4j.spi.LoggingEvent;
-import org.apache.log4j.spi.ThrowableInformation;
+import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.Layout;
+import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
+import org.apache.logging.log4j.core.config.plugins.Plugin;
+import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
+import org.apache.logging.log4j.core.config.plugins.PluginElement;
+import org.apache.logging.log4j.core.config.plugins.PluginFactory;
+import org.apache.logging.log4j.core.layout.PatternLayout;
 
 /**
- * <p>
- * Log4j appender that appends logs to Logstash in a JSON-format<br/>
- * that is very easy for Logstash to consume and dump directly into Elastic Search, for example.
- * </p>
- *
- * @author Anton Johansson
+ * Log4j appender that appends logs to Logstash in a JSON-format that is very easy for Logstash to consume and dump directly into Elasticsearch, for
+ * example.
  */
-public class LogstashAppender extends AppenderSkeleton
+@Plugin(name = "LogstashAppender", category = "Core", elementType = "appender", printObject = true)
+public final class LogstashAppender extends AbstractAppender
 {
     private static final String TRUNCATED_BY_LOGSTASH_APPENDER = "...[truncated by logstash appender]";
     private static final int TRUNCATE_MSG_LENGTH = TRUNCATED_BY_LOGSTASH_APPENDER.length();
 
-    private String application;
-    private String environment;
-    private String logstashHost = "";
-    private int logstashPort;
-    private String mdcKeys = "";
-    private String parameters = "";
-    private boolean appendClassInformation;
-    private int stacktraceLength = Integer.MIN_VALUE;
+    private final String application;
+    private final String environment;
+    private final int logstashPort;
+    private final boolean appendClassInformation;
+    private final int stacktraceLength;
+    private final String[] mdcKeys;
+    private final Map<String, String> parameters;
+    private final InetAddress address;
+    private final DatagramSocket socket;
 
-    private DatagramSocket socket;
-    private InetAddress address;
-    private String[] actualMdcKeys;
-    private Map<String, String> actualParameters = new HashMap<>();
-
-    public void setApplication(String application)
+    //CSOFF
+    LogstashAppender(
+            String name,
+            Filter filter,
+            Layout<? extends Serializable> layout,
+            String application,
+            String environment,
+            String logstashHost,
+            int logstashPort,
+            String mdcKeys,
+            String parameters,
+            boolean appendClassInformation,
+            int stacktraceLength)
+    //CSON
     {
+        super(name, filter, layout, true);
         this.application = application;
-    }
-
-    public void setEnvironment(String environment)
-    {
         this.environment = environment;
-    }
-
-    public void setLogstashHost(String logstashHost)
-    {
-        this.logstashHost = logstashHost;
-    }
-
-    public void setLogstashPort(int logstashPort)
-    {
         this.logstashPort = logstashPort;
-    }
-
-    public void setMdcKeys(String mdcKeys)
-    {
-        this.mdcKeys = mdcKeys;
-    }
-
-    public void setAppendClassInformation(boolean appendClassInformation)
-    {
         this.appendClassInformation = appendClassInformation;
-    }
-
-    public void setStacktraceLength(int stacktraceLength)
-    {
         this.stacktraceLength = stacktraceLength;
+        this.mdcKeys = mdcKeys.replaceAll(" ", "").split(",");
+        this.parameters = asList(parameters.split("&"))
+                .stream()
+                .map(s -> s.split("=", 2))
+                .filter(p -> p != null && p.length == 2)
+                .collect(toMap(a -> a[0], a -> a[1]));
+
+        this.address = getAddress(logstashHost);
+        this.socket = getSocket();
     }
 
-    public void setParameters(String parameters)
+    private DatagramSocket getSocket()
     {
-        this.parameters = parameters;
+        try
+        {
+            return new DatagramSocket();
+        }
+        catch (SocketException e)
+        {
+            LOGGER.error("Could not create UDP socket");
+            return null;
+        }
+    }
+
+    private InetAddress getAddress(String logstashHost)
+    {
+        try
+        {
+            return InetAddress.getByName(logstashHost);
+        }
+        catch (UnknownHostException e)
+        {
+            LOGGER.error("Could not find host: " + logstashHost);
+            return null;
+        }
     }
 
     /**
-     * Appends given logging event to Logstash.
+     * Creates a new appender.
      */
+    @PluginFactory
+    //CSOFF
+    public static LogstashAppender createAppender(
+            @PluginAttribute("name") String name,
+            @PluginElement("Layout") Layout<? extends Serializable> layout,
+            @PluginElement("Filter") Filter filter,
+            @PluginAttribute("application") String application,
+            @PluginAttribute("environment") String environment,
+            @PluginAttribute("logstashHost") String logstashHost,
+            @PluginAttribute("logstashPort") String logstashPortString,
+            @PluginAttribute("mdcKeys") String mdcKeys,
+            @PluginAttribute("parameters") String parameters,
+            @PluginAttribute("appendClassInformation") String appendClassInformationString,
+            @PluginAttribute("stacktraceLength") String stacktraceLengthString)
+    {
+        if (name == null)
+        {
+            LOGGER.error("No name provided for LogstashAppender");
+            return null;
+        }
+
+        if (layout == null)
+        {
+            layout = PatternLayout.createDefaultLayout();
+        }
+
+        int logstashPort = 0;
+        try
+        {
+            logstashPort = Integer.parseInt(logstashPortString);
+        }
+        catch (NumberFormatException e)
+        {
+            LOGGER.error("logstashPort must be an integer value");
+            return null;
+        }
+
+        if (mdcKeys == null)
+        {
+            mdcKeys = "";
+        }
+
+        if (parameters == null)
+        {
+            parameters = "";
+        }
+
+        boolean appendClassInformation = Boolean.parseBoolean(appendClassInformationString);
+
+        int stacktraceLength = Integer.MIN_VALUE;
+        try
+        {
+            logstashPort = Integer.parseInt(stacktraceLengthString);
+        }
+        catch (NumberFormatException e)
+        {
+            LOGGER.error("stacktraceLength must be an integer value");
+            return null;
+        }
+
+        return new LogstashAppender(
+                name,
+                filter,
+                layout,
+                application,
+                environment,
+                logstashHost,
+                logstashPort,
+                mdcKeys,
+                parameters,
+                appendClassInformation,
+                stacktraceLength);
+    }
+    //CSON
+
     @Override
-    protected void append(LoggingEvent event)
+    public void append(LogEvent event)
     {
         if (socket == null)
         {
@@ -113,12 +204,12 @@ public class LogstashAppender extends AppenderSkeleton
         }
     }
 
-    private String getData(LoggingEvent event)
+    private String getData(LogEvent event)
     {
         StringBuilder data = new StringBuilder();
-        addValue(data, "message", event.getMessage());
+        addValue(data, "message", event.getMessage().getFormattedMessage());
         addValue(data, "name", event.getLoggerName());
-        addValue(data, "severity", event.getLevel().getSyslogEquivalent());
+        addValue(data, "severity", event.getLevel().intLevel());
         addValue(data, "severityText", event.getLevel());
 
         if (application != null)
@@ -133,27 +224,27 @@ public class LogstashAppender extends AppenderSkeleton
 
         if (appendClassInformation)
         {
-            LocationInfo locationInformation = event.getLocationInformation();
-            addValue(data, "className", locationInformation.getClassName());
-            addValue(data, "lineNumber", locationInformation.getLineNumber());
+            StackTraceElement source = event.getSource();
+            addValue(data, "className", source.getClassName());
+            addValue(data, "lineNumber", source.getLineNumber());
         }
 
-        ThrowableInformation throwableInformation = event.getThrowableInformation();
-        if (throwableInformation != null)
+        Throwable thrown = event.getThrown();
+        if (thrown != null)
         {
-            addValue(data, "stacktrace", getStacktrace(throwableInformation.getThrowable()));
+            addValue(data, "stacktrace", getStacktrace(thrown));
         }
 
-        for (String mdcKey : actualMdcKeys)
+        for (String mdcKey : mdcKeys)
         {
-            Object mdcValue = event.getMDC(mdcKey);
+            String mdcValue = event.getContextMap().get(mdcKey);
             if (mdcValue != null)
             {
                 addValue(data, mdcKey, mdcValue);
             }
         }
 
-        actualParameters.forEach((k, v) ->
+        parameters.forEach((k, v) ->
         {
             addValue(data, k, v);
         });
@@ -214,55 +305,13 @@ public class LogstashAppender extends AppenderSkeleton
         }
     }
 
-    /**
-     * We use UDP when appending to Logstash, so we do not need to close the connection.
-     */
     @Override
-    public void close()
+    public void stop()
     {
+        super.stop();
         if (socket != null)
         {
             socket.close();
-        }
-    }
-
-    /**
-     * This appender does not require a layout, hence we return {@code false}.
-     *
-     * @return Returns {@code false}.
-     */
-    @Override
-    public boolean requiresLayout()
-    {
-        return false;
-    }
-
-    /**
-     * Creates the UDP socket.
-     */
-    @Override
-    public void activateOptions()
-    {
-        actualMdcKeys = mdcKeys.replaceAll(" ", "").split(",");
-
-        actualParameters = Arrays.asList(parameters.split("&"))
-                .stream()
-                .map(s -> s.split("=", 2))
-                .filter(p -> p != null && p.length == 2)
-                .collect(Collectors.toMap(a -> a[0], a -> a[1]));
-
-        try
-        {
-            address = InetAddress.getByName(logstashHost);
-            socket = new DatagramSocket();
-        }
-        catch (UnknownHostException e)
-        {
-            System.err.println("Could not find host: " + logstashHost);
-        }
-        catch (SocketException e)
-        {
-            System.err.println("Could not create UDP socket");
         }
     }
 
@@ -275,7 +324,7 @@ public class LogstashAppender extends AppenderSkeleton
      * @return
      */
     //CSOFF
-    private String escape(String s)
+    static String escape(String s)
     {
         if (s == null)
         {
@@ -292,7 +341,7 @@ public class LogstashAppender extends AppenderSkeleton
      * @param s - Must not be null.
      * @param sb
      */
-    private void escape(String s, StringBuffer sb)
+    private static void escape(String s, StringBuffer sb)
     {
         for (int i = 0; i < s.length(); i++)
         {

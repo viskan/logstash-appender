@@ -1,34 +1,39 @@
 package com.viskan.logstash.appender;
 
+import static java.lang.System.lineSeparator;
+import static org.apache.logging.log4j.Level.INFO;
+import static org.apache.logging.log4j.core.layout.PatternLayout.createDefaultLayout;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.MDC;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.ThreadContext;
+import org.apache.logging.log4j.core.LoggerContext;
+import org.apache.logging.log4j.core.config.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
 /**
  * Unit tests of {@link LogstashAppender}.
- *
- * @author Anton Johansson
  */
 public class LogstashAppenderTest extends Assert
 {
-    private static final Logger LOGGER = Logger.getLogger(LogstashAppenderTest.class);
+    private static final String SEP = LogstashAppender.escape(lineSeparator());
 
     @Test
     public void test_appender_with_details() throws IOException
     {
-        configure(true, false);
+        Logger logger = configure(true, false);
 
         byte[] received = new byte[1024];
         DatagramPacket packet = new DatagramPacket(received, received.length);
 
         try (DatagramSocket socket = new DatagramSocket(12345))
         {
-            new Thread(new LoggerTask(true)).start();
+            new Thread(new LoggerTask(logger, true)).start();
 
             socket.setSoTimeout(50000);
             socket.receive(packet);
@@ -43,14 +48,14 @@ public class LogstashAppenderTest extends Assert
     @Test
     public void test_appender_without_details() throws IOException
     {
-        configure(false, false);
+        Logger logger = configure(false, false);
 
         byte[] received = new byte[1024];
         DatagramPacket packet = new DatagramPacket(received, received.length);
 
         try (DatagramSocket socket = new DatagramSocket(12345))
         {
-            new Thread(new LoggerTask(false)).start();
+            new Thread(new LoggerTask(logger, false)).start();
 
             socket.setSoTimeout(50000);
             socket.receive(packet);
@@ -65,7 +70,7 @@ public class LogstashAppenderTest extends Assert
     @Test
     public void test_empty_static_parameters() throws Exception
     {
-        configure(false, false);
+        Logger logger = configure(false, false);
 
         byte[] received = new byte[1024];
         DatagramPacket packet = new DatagramPacket(received, received.length);
@@ -74,14 +79,14 @@ public class LogstashAppenderTest extends Assert
         {
             new Thread(() ->
             {
-                LOGGER.info("Test empty static keys!");
+                logger.info("Test empty static keys!");
             }).start();
 
             socket.setSoTimeout(50000);
             socket.receive(packet);
 
             String actual = new String(received, 0, packet.getLength());
-            String expected = "{\"message\":\"Test empty static keys!\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":6,\"severityText\":\"INFO\"}";
+            String expected = "{\"message\":\"Test empty static keys!\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\"}";
 
             assertEquals("Expect the correct logger message", expected, actual);
         }
@@ -90,7 +95,7 @@ public class LogstashAppenderTest extends Assert
     @Test
     public void test_static_parameters() throws Exception
     {
-        configure(false, true);
+        Logger logger = configure(false, true);
 
         byte[] received = new byte[1024];
         DatagramPacket packet = new DatagramPacket(received, received.length);
@@ -99,65 +104,90 @@ public class LogstashAppenderTest extends Assert
         {
             new Thread(() ->
             {
-                LOGGER.info("Test static keys!");
+                logger.info("Test static keys!");
             }).start();
 
             socket.setSoTimeout(50000);
             socket.receive(packet);
 
             String actual = new String(received, 0, packet.getLength());
-            String expected = "{\"message\":\"Test static keys!\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":6,\"severityText\":\"INFO\",\"group2\":\"REQUEST\",\"group\":\"PSP\"}";
+            String expected = "{\"message\":\"Test static keys!\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\",\"group2\":\"REQUEST\",\"group\":\"PSP\"}";
 
             assertEquals("Expect the correct logger message", expected, actual);
         }
     }
 
-    private void configure(boolean details, boolean parameters)
+    private Logger configure(boolean details, boolean hasParameters)
     {
-        LogstashAppender appender = new LogstashAppender();
-        appender.setLogstashHost("localhost");
-        appender.setLogstashPort(12345);
+        String application = null;
+        String environment = null;
+        boolean appendClassInformation = false;
+        String mdcKeys = "";
+        String parameters = "";
 
         if (details)
         {
-            appender.setApplication("Test");
-            appender.setEnvironment("Development");
-            appender.setAppendClassInformation(true);
-            appender.setMdcKeys("key1,key2,key3");
+            application = "Test";
+            environment = "Development";
+            appendClassInformation = true;
+            mdcKeys = "key1,key2,key3";
         }
 
-        if (parameters)
+        if (hasParameters)
         {
-            appender.setParameters("group=PSP&group2=REQUEST");
+            parameters = "group=PSP&group2=REQUEST";
         }
 
-        appender.activateOptions();
+        LogstashAppender appender = new LogstashAppender(
+                "TEST_APPENDER",
+                null,
+                createDefaultLayout(),
+                application,
+                environment,
+                "localhost",
+                12345,
+                mdcKeys,
+                parameters,
+                appendClassInformation,
+                Integer.MIN_VALUE);
+        appender.start();
 
-        Logger.getRootLogger().removeAllAppenders();
-        Logger.getRootLogger().addAppender(appender);
+        LoggerContext context = (LoggerContext) LogManager.getContext(false);
+        context.reconfigure();
+        Configuration configuration = context.getConfiguration();
+        configuration.getAppenders().remove(appender.getName());
+        configuration.addAppender(appender);
+        configuration.getLoggerConfig(LogstashAppenderTest.class.getName()).setLevel(INFO);
+        context.updateLoggers();
+
+        System.out.println(configuration.getAppenders());
+
+        org.apache.logging.log4j.core.Logger logger = (org.apache.logging.log4j.core.Logger) LogManager.getLogger(LogstashAppenderTest.class);
+        logger.addAppender(appender);
+        return logger;
     }
 
     private String getExpectedWithDetails()
     {
-        return "{\"message\":\"Some message\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":3,\"severityText\":\"ERROR\",\"application\":\"Test\",\"environment\":\"Development\",\"className\":\"com.viskan.logstash.appender.LogstashAppenderTest$LoggerTask\",\"lineNumber\":\"179\",\"stacktrace\":\"java.lang.Exception: Error\\r\\n\\tat com.viskan.logstash.appender.LogstashAppenderTest$LoggerTask.run(LogstashAppenderTest.java:179)\\r\\n\\tat java.lang.Thread.run(Thread.java:745)\\r\\n\",\"key2\":\"value2\"}";
+        return "{\"message\":\"Some message\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":200,\"severityText\":\"ERROR\",\"application\":\"Test\",\"environment\":\"Development\",\"className\":\"com.viskan.logstash.appender.LogstashAppenderTest$LoggerTask\",\"lineNumber\":209,\"stacktrace\":\"java.lang.Exception: Error" + SEP + "\\tat com.viskan.logstash.appender.LogstashAppenderTest$LoggerTask.run(LogstashAppenderTest.java:209)" + SEP + "\\tat java.lang.Thread.run(Thread.java:748)" + SEP + "\",\"key2\":\"value2\"}";
     }
 
     private String getExpectedWithoutDetails()
     {
-        return "{\"message\":\"Hello World!\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":6,\"severityText\":\"INFO\"}";
+        return "{\"message\":\"Hello World!\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\"}";
     }
 
     /**
      * Task for executing the logging.
-     *
-     * @author Anton Johansson
      */
     private static class LoggerTask implements Runnable
     {
-        boolean details;
+        private final Logger logger;
+        private final boolean details;
 
-        private LoggerTask(boolean details)
+        private LoggerTask(Logger logger, boolean details)
         {
+            this.logger = logger;
             this.details = details;
         }
 
@@ -174,15 +204,15 @@ public class LogstashAppenderTest extends Assert
 
             if (details)
             {
-                MDC.put("key2", "value2");
-                MDC.put("key4", "value4");
-                LOGGER.error("Some message", new Exception("Error"));
-                MDC.remove("key2");
-                MDC.remove("key4");
+                ThreadContext.put("key2", "value2");
+                ThreadContext.put("key4", "value4");
+                logger.error("Some message", new Exception("Error"));
+                ThreadContext.remove("key2");
+                ThreadContext.remove("key4");
             }
             else
             {
-                LOGGER.info("Hello World!");
+                logger.info("Hello World!");
             }
         }
     }
