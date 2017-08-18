@@ -1,4 +1,4 @@
-package com.viskan.logstash.appender;
+package org.apache.logging.log4j.core.appender;
 
 import static java.lang.Math.min;
 import static java.nio.charset.Charset.forName;
@@ -19,7 +19,6 @@ import java.util.Map;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
@@ -30,7 +29,7 @@ import org.apache.logging.log4j.core.layout.PatternLayout;
  * Log4j appender that appends logs to Logstash in a JSON-format that is very easy for Logstash to consume and dump directly into Elasticsearch, for
  * example.
  */
-@Plugin(name = "LogstashAppender", category = "Core", elementType = "appender", printObject = true)
+@Plugin(name = "Logstash", category = "Core", elementType = "appender", printObject = true)
 public final class LogstashAppender extends AbstractAppender
 {
     private static final String TRUNCATED_BY_LOGSTASH_APPENDER = "...[truncated by logstash appender]";
@@ -107,8 +106,8 @@ public final class LogstashAppender extends AbstractAppender
     /**
      * Creates a new appender.
      */
-    @PluginFactory
     //CSOFF
+    @PluginFactory
     public static LogstashAppender createAppender(
             @PluginAttribute("name") String name,
             @PluginElement("Layout") Layout<? extends Serializable> layout,
@@ -157,14 +156,17 @@ public final class LogstashAppender extends AbstractAppender
         boolean appendClassInformation = Boolean.parseBoolean(appendClassInformationString);
 
         int stacktraceLength = Integer.MIN_VALUE;
-        try
+        if (stacktraceLengthString != null)
         {
-            logstashPort = Integer.parseInt(stacktraceLengthString);
-        }
-        catch (NumberFormatException e)
-        {
-            LOGGER.error("stacktraceLength must be an integer value");
-            return null;
+            try
+            {
+                stacktraceLength = Integer.parseInt(stacktraceLengthString);
+            }
+            catch (NumberFormatException e)
+            {
+                LOGGER.error("stacktraceLength must be an integer value");
+                return null;
+            }
         }
 
         return new LogstashAppender(

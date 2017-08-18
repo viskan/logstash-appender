@@ -84,10 +84,9 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Import-Package />
-                        <Fragment-Host>org.ops4j.pax.logging.pax-logging-service</Fragment-Host>
-                        <_failok>true</_failok>
+                        <Import-Package>!*</Import-Package>
+                        <Embed-Dependency>*;scope=compile|runtime;inline=true</Embed-Dependency>
+                        <Fragment-Host>org.ops4j.pax.logging.pax-logging-log4j2</Fragment-Host>
                     </instructions>
                 </configuration>
             </plugin>

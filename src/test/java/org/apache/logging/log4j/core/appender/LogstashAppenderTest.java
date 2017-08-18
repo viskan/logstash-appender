@@ -1,4 +1,4 @@
-package com.viskan.logstash.appender;
+package org.apache.logging.log4j.core.appender;
 
 import static java.lang.System.lineSeparator;
 import static org.apache.logging.log4j.Level.INFO;
@@ -86,7 +86,7 @@ public class LogstashAppenderTest extends Assert
             socket.receive(packet);
 
             String actual = new String(received, 0, packet.getLength());
-            String expected = "{\"message\":\"Test empty static keys!\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\"}";
+            String expected = "{\"message\":\"Test empty static keys!\",\"name\":\"org.apache.logging.log4j.core.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\"}";
 
             assertEquals("Expect the correct logger message", expected, actual);
         }
@@ -111,7 +111,7 @@ public class LogstashAppenderTest extends Assert
             socket.receive(packet);
 
             String actual = new String(received, 0, packet.getLength());
-            String expected = "{\"message\":\"Test static keys!\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\",\"group2\":\"REQUEST\",\"group\":\"PSP\"}";
+            String expected = "{\"message\":\"Test static keys!\",\"name\":\"org.apache.logging.log4j.core.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\",\"group2\":\"REQUEST\",\"group\":\"PSP\"}";
 
             assertEquals("Expect the correct logger message", expected, actual);
         }
@@ -169,12 +169,14 @@ public class LogstashAppenderTest extends Assert
 
     private String getExpectedWithDetails()
     {
-        return "{\"message\":\"Some message\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":200,\"severityText\":\"ERROR\",\"application\":\"Test\",\"environment\":\"Development\",\"className\":\"com.viskan.logstash.appender.LogstashAppenderTest$LoggerTask\",\"lineNumber\":209,\"stacktrace\":\"java.lang.Exception: Error" + SEP + "\\tat com.viskan.logstash.appender.LogstashAppenderTest$LoggerTask.run(LogstashAppenderTest.java:209)" + SEP + "\\tat java.lang.Thread.run(Thread.java:748)" + SEP + "\",\"key2\":\"value2\"}";
+        return "{\"message\":\"Some message\",\"name\":\"org.apache.logging.log4j.core.appender.LogstashAppenderTest\",\"severity\":200,\"severityText\":\"ERROR\",\"application\":\"Test\",\"environment\":\"Development\",\"className\":\"org.apache.logging.log4j.core.appender.LogstashAppenderTest$LoggerTask\",\"lineNumber\":211,\"stacktrace\":\"java.lang.Exception: Error"
+            + SEP + "\\tat org.apache.logging.log4j.core.appender.LogstashAppenderTest$LoggerTask.run(LogstashAppenderTest.java:211)" + SEP + "\\tat java.lang.Thread.run(Thread.java:748)" + SEP
+            + "\",\"key2\":\"value2\"}";
     }
 
     private String getExpectedWithoutDetails()
     {
-        return "{\"message\":\"Hello World!\",\"name\":\"com.viskan.logstash.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\"}";
+        return "{\"message\":\"Hello World!\",\"name\":\"org.apache.logging.log4j.core.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\"}";
     }
 
     /**
