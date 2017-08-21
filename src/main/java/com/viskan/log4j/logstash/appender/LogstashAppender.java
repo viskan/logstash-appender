@@ -1,4 +1,4 @@
-package org.apache.logging.log4j.core.appender;
+package com.viskan.log4j.logstash.appender;
 
 import static java.lang.Math.min;
 import static java.nio.charset.Charset.forName;
@@ -19,6 +19,7 @@ import java.util.Map;
 import org.apache.logging.log4j.core.Filter;
 import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
+import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.config.plugins.Plugin;
 import org.apache.logging.log4j.core.config.plugins.PluginAttribute;
 import org.apache.logging.log4j.core.config.plugins.PluginElement;
@@ -239,7 +240,7 @@ public final class LogstashAppender extends AbstractAppender
 
         for (String mdcKey : mdcKeys)
         {
-            String mdcValue = event.getContextMap().get(mdcKey);
+            String mdcValue = event.getContextData().getValue(mdcKey);
             if (mdcValue != null)
             {
                 addValue(data, mdcKey, mdcValue);
