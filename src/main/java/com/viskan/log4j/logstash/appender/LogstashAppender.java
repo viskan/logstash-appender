@@ -106,6 +106,19 @@ public final class LogstashAppender extends AbstractAppender
 
     /**
      * Creates a new appender.
+     *
+     * @param name The name of the appender.
+     * @param layout The layout.
+     * @param filter The (optional) filter to use.
+     * @param application The application field.
+     * @param environment The environment field.
+     * @param logstashHost The host of the logstash installation.
+     * @param logstashPortString The port of the logstash installation.
+     * @param mdcKeys A comma-separated list of MDC keys to send.
+     * @param parameters A comma-separated list of parameters to send.
+     * @param appendClassInformationString Whether or not to append class information.
+     * @param stacktraceLengthString The length of the stacktrace where it will be truncated.
+     * @return Returns the created appender.
      */
     //CSOFF
     @PluginFactory
