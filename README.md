@@ -15,7 +15,7 @@ You can pull it from the central Maven repositories:
 	<groupId>com.viskan</groupId>
 	<artifactId>logstash-appender</artifactId>
 	<version>1.1.0</version>
-<dependency>
+</dependency>
 ```
 
 
