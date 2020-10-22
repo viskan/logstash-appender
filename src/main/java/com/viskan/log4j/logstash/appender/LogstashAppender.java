@@ -1,7 +1,6 @@
 package com.viskan.log4j.logstash.appender;
 
 import static java.lang.Math.min;
-import static java.nio.charset.Charset.forName;
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toMap;
 
@@ -14,6 +13,12 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import org.apache.logging.log4j.core.Filter;
@@ -115,7 +120,7 @@ public final class LogstashAppender extends AbstractAppender
      * @param logstashHost The host of the logstash installation.
      * @param logstashPortString The port of the logstash installation.
      * @param mdcKeys A comma-separated list of MDC keys to send.
-     * @param parameters A comma-separated list of parameters to send.
+     * @param parameters A ampersand-separated list of parameters to send.
      * @param appendClassInformationString Whether or not to append class information.
      * @param stacktraceLengthString The length of the stacktrace where it will be truncated.
      * @return Returns the created appender.
@@ -206,9 +211,8 @@ public final class LogstashAppender extends AbstractAppender
             return;
         }
 
-        String data = getData(event);
-        byte[] buffer = data.getBytes(forName("UTF-8"));
-
+        StringBuilder data = getData(event);
+        byte[] buffer = getBytes(data);
         DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, logstashPort);
         try
         {
@@ -220,7 +224,44 @@ public final class LogstashAppender extends AbstractAppender
         }
     }
 
-    private String getData(LogEvent event)
+    private byte[] getBytes(StringBuilder builder)
+    {
+        Charset charset = StandardCharsets.UTF_8;
+        CharsetEncoder encoder = charset.newEncoder();
+
+        // No allocation performed, just wraps the StringBuilder.
+        CharBuffer buffer = CharBuffer.wrap(builder);
+
+        ByteBuffer byteBuffer;
+        try
+        {
+            byteBuffer = encoder.encode(buffer);
+        }
+        catch (CharacterCodingException e)
+        {
+            throw new RuntimeException("Error encoding buffer", e);
+        }
+
+        byte[] array;
+        int arrayLen = byteBuffer.limit();
+        if (arrayLen == byteBuffer.capacity())
+        {
+            array = byteBuffer.array();
+        }
+        else
+        {
+            // This will place two copies of the byte sequence in memory,
+            // until byteBuffer gets garbage-collected (which should happen
+            // pretty quickly once the reference to it is null'd).
+
+            array = new byte[arrayLen];
+            byteBuffer.get(array);
+        }
+        byteBuffer = null;
+        return array;
+    }
+
+    private StringBuilder getData(LogEvent event)
     {
         StringBuilder data = new StringBuilder();
         addValue(data, "message", event.getMessage().getFormattedMessage());
@@ -265,7 +306,9 @@ public final class LogstashAppender extends AbstractAppender
             addValue(data, k, v);
         });
 
-        return data.append("}").toString();
+        data.append("}");
+
+        return data;
     }
 
     private void addValue(StringBuilder data, String key, Object value)

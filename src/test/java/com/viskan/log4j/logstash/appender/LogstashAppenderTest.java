@@ -104,14 +104,14 @@ public class LogstashAppenderTest extends Assert
         {
             new Thread(() ->
             {
-                logger.info("Test static keys!");
+                logger.info("Test static keys! With unicode " + String.valueOf((char) 228) + String.valueOf((char) 229));
             }).start();
 
             socket.setSoTimeout(50000);
             socket.receive(packet);
 
             String actual = new String(received, 0, packet.getLength());
-            String expected = "{\"message\":\"Test static keys!\",\"name\":\"com.viskan.log4j.logstash.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\",\"group2\":\"REQUEST\",\"group\":\"PSP\"}";
+            String expected = "{\"message\":\"Test static keys! With unicode " + String.valueOf((char) 228) + String.valueOf((char) 229) + "\",\"name\":\"com.viskan.log4j.logstash.appender.LogstashAppenderTest\",\"severity\":400,\"severityText\":\"INFO\",\"group2\":\"REQUEST\",\"group\":\"PSP\"}";
 
             assertEquals("Expect the correct logger message", expected, actual);
         }
